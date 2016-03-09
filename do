@@ -11,12 +11,13 @@
     .do format: each line should be in the format:
         [id[,alternative_ids]:][comment]>command
     with :
-        id : a unique identifier used to identify the command to run. Can contain any printable character
+        id : a unique identifier used to identify the command to run. Can contain any printable character. 
         alternative_ids: one or more optional ids separated by a comma.
         comment: an optional comment or description on the command
         command: the actual command to run
 
     if id is omitted, one will be automatically generated (from the line number and random characters).
+    If no id is given when running the do command, the command with identifier "default" is going to be executed
     examples:
         0: default command > ls -l
         1, kill the fox > killall firefox
@@ -79,6 +80,10 @@ def parse_command_file(filename):
                     keys_list[j] = key
                     keys_to_id[key]= i
                 (comment,separator,command) = rest_of_line.partition('>')
+                if not separator:
+                    # If no separator is given, we assume everything is just the command
+                    command = comment
+                    comment = ''
                 commands[i] = ( keys_list , comment.strip(),command.strip() )
 
 def print_available_commands():
@@ -99,16 +104,19 @@ def print_available_commands():
         print(keys_str,': ',comment,'>',command)
 
 def execute(choice):
-    id = keys_to_id[choice]
-    (keys_list,comment,command) = commands[id]
-    confirmation = input('Run command ? > ' + command + ' [Y/n]')
-    if confirmation:
-        if confirmation[0] in 'nN':
-            print('Abort')
+    id = keys_to_id.get(choice)
+    if id == None:
+        print("This identifier doesn't exist. Abort.")
+    else:
+        (keys_list,comment,command) = commands[id]
+        confirmation = input('Run command ? > ' + command + ' [Y/n]')
+        if confirmation:
+            if confirmation[0] in 'nN':
+                print('Abort')
+            else:
+                subprocess.run([command],shell=True)
         else:
             subprocess.run([command],shell=True)
-    else:
-        subprocess.run([command],shell=True)
 
 def main(argv=None):
     if argv is None:
@@ -139,7 +147,7 @@ def main(argv=None):
         print(commands)
         print('###### END (commands)')
     print_available_commands()
-    choice = input('Enter identifier of the command you want to run: ')
+    choice = input('Enter identifier of the command you want to run: ').strip()
     if not choice:
         choice='default'
     if verbose:
