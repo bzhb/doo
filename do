@@ -22,12 +22,30 @@
         0: default command > ls -l
         1, kill the fox > killall firefox
         > ls -a
+
+OPTIONS
 """
+import os
+import shutil
 import sys
 import subprocess
 import getopt
 import random
 import string
+
+#TODO:
+# * nice interrupt with ^C
+# * read global config file
+# * loop mode
+# * parse commandline
+# * verify the program is running with python3
+# * add a q,quit key in loop mode
+# * write the modified key to .do file when there is duplicate keys
+# * add numeric keys to every command
+# * write numeric keys into .do files
+# * add calculation for the space taken by keys / comment / command
+# * put keys in bold font
+# * ignore lines with no commands
 
 # Default options:
 debug = True
@@ -35,13 +53,20 @@ local_config_file ='.do'
 global_config_file ='~/.config/do/do.conf'
 no_global_config = False
 verbose = True
+#loop = True
 loop = False
 colors = False
 no_confirm = False
 shell='zsh'
+add_numeric_key_to_every_command = False
+shell_width = 100
 
 commands = {}
 keys_to_id = {}
+max_keys_width = 0
+max_comment_width = 0
+max_command_width = 0
+
 
 def process(arg):
     pass
@@ -53,6 +78,7 @@ def generate_unique_key(key):
     return key
 
 def parse_command_file(filename):
+    global max_keys_width,max_comment_width,max_command_width
     with open(filename) as command_file:
         for i,line in enumerate(command_file):
             if line[0] == '#':
@@ -72,36 +98,87 @@ def parse_command_file(filename):
                     keys = str(i)
                 elif not keys:
                     # means no keys where given (line starts with ':')
-                    # By default we attribute the line number as key for the command
+                    # By default we attribute the line number (starting at line 0) as key for the command
                     keys = str(i)
                 keys_list = keys.split(',')
+                keys_width = 0
                 for j,key in enumerate(keys_list) :
                     key = generate_unique_key( key.strip() )
+                    keys_width += len(key) + 1 # the +1 is for the comma between keys
                     keys_list[j] = key
                     keys_to_id[key]= i
+                if keys_width > 0:
+                    keys_width -= 1 # because no comma after last key
+                if keys_width > max_keys_width:
+                    max_keys_width = keys_width
                 (comment,separator,command) = rest_of_line.partition('>')
                 if not separator:
-                    # If no separator is given, we assume everything is just the command
+                    # If no separator is given, we assume the whole string is just a command
                     command = comment
                     comment = ''
-                commands[i] = ( keys_list , comment.strip(),command.strip() )
+                comment = comment.strip()
+                l = len(comment)
+                if l > max_comment_width:
+                    max_comment_width = l
+                command = command.strip()
+                l = len(command)
+                if l > max_command_width:
+                    max_command_width = l
+                commands[i] = ( keys_list , comment , command )
+
+def adjust_width(s,width):
+    #TODO: in case the string is truncated, add '...'
+    return s[:width].ljust(width)
 
 def print_available_commands():
-    keys_field_size = 20
-    comment_field_size = 40
-    command_field_size = 40
-    #TODO: find a smarter way to calculate the size for each field
-    print('Identifier'.ljust(keys_field_size),'| ','Comment'.ljust(comment_field_size),'| ','Command'.ljust(command_field_size))
-    print(''.ljust(keys_field_size + comment_field_size + command_field_size + 4,'-'))
+    global max_keys_width,max_comment_width,max_command_width
+    keys_field_width = 20
+    comment_field_width = 40
+    command_field_width = 40
+    #TODO: find a smarter way to calculate the width for each field
+    #rows, columns = os.popen('stty size', 'r').read().split()
+    term = shutil.get_terminal_size((80, 20))
+    term_width = term.columns
+    if debug:
+        print('Terminal width:',term_width)
+        print('Max widths: ', max_keys_width,',',max_comment_width,',',max_command_width)
+    if max_keys_width + max_comment_width + max_command_width + 3 < term_width :
+        # The array lines fill in the terminal
+        if debug:
+            print('The array fit into the terminal')
+        keys_field_width = max_keys_width
+        comment_field_width = max_comment_width
+        command_field_width = max_command_width
+    else:
+        # though choice here about what to scrap
+        if debug:
+            print("The array doesn't fit into the terminal")
+        keys_field_width = max_keys_width
+        comment_field_width = max_comment_width
+        command_field_width = max_command_width
+        pass
+    show_comments = True
+    if max_comment_width == 0:
+        show_comments = False
+        comment_field_width = 0
+
+    if show_comments:
+        print('Id(s)'.ljust(keys_field_width),'| ','Comment'.ljust(comment_field_width),'| ','Command'.ljust(command_field_width))
+    else:
+        print('Id(s)'.ljust(keys_field_width),'| ','Command'.ljust(command_field_width))
+    print(''.ljust(keys_field_width + comment_field_width + command_field_width + 4,'-'))
     for (keys_list,comment,command) in commands.values() :
         keys_str = ''
         for key in keys_list:
             keys_str += key + ','
         keys_str = keys_str[:-1]
-        keys_str = keys_str[:keys_field_size].ljust(keys_field_size)
-        comment = comment[:comment_field_size].ljust(comment_field_size)
-        command = command[:command_field_size].ljust(command_field_size)
-        print(keys_str,': ',comment,'>',command)
+        keys_str = adjust_width(keys_str,keys_field_width)
+        comment = adjust_width(comment,comment_field_width)
+        command = adjust_width(command,command_field_width)
+        if show_comments:
+            print(keys_str,': ',comment,'>',command)
+        else:
+            print(keys_str,':>',command)
 
 def execute(choice):
     id = keys_to_id.get(choice)
@@ -117,6 +194,14 @@ def execute(choice):
                 subprocess.run([command],shell=True)
         else:
             subprocess.run([command],shell=True)
+
+def choose_command():
+    choice = input('Enter id of the command you want to run: ').strip()
+    if not choice:
+        choice='default'
+    if verbose:
+        print('Choice is : ',choice)
+    execute(choice)
 
 def main(argv=None):
     if argv is None:
@@ -139,7 +224,7 @@ def main(argv=None):
     for arg in args:
         process(arg) # process() is defined elsewhere
 
-    parse_command_file('.do')
+    parse_command_file(local_config_file)
     if debug:
         print('###### keys_to_id :')
         print(keys_to_id)
@@ -147,12 +232,10 @@ def main(argv=None):
         print(commands)
         print('###### END (commands)')
     print_available_commands()
-    choice = input('Enter identifier of the command you want to run: ').strip()
-    if not choice:
-        choice='default'
-    if verbose:
-        print('Choice is : ',choice)
-    execute(choice)
+    choose_command()
+    while loop:
+        print_available_commands()
+        choose_command()
 
 if __name__ == "__main__":
     sys.exit(main())
