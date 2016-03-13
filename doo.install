@@ -1,0 +1,5 @@
+post_install() {
+    echo
+    echo "You should edit '~/.config/doo/doo.conf' and create .doo files in the local folder for using do command"
+    echo
+}
