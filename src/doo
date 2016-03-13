@@ -81,6 +81,7 @@ COPYRIGHT
 """
 import os
 import shutil
+from shutil import copyfile
 import sys
 import subprocess
 import getopt
@@ -130,11 +131,13 @@ class term_mode:
    NORMAL = '\033[0m'
 
 
+global_config_file_template = '/usr/share/doo/doo.conf'
 
 # Default options:
 local_config_only = False
-global_config_file = expanduser('~/.config/doo/doo.conf')
-local_config_file ='.doo'
+global_config_dir = expanduser('~/.config/doo/')
+global_config_file = global_config_dir + 'doo.conf'
+local_config_file = '.doo'
 debug = False
 loop = False
 colors = True
@@ -153,12 +156,14 @@ def process_cmdline_options(opts):
         if o in ("-c", "--config-file"):
             local_config_file = expanduser(a)
         if o in ("-g", "--global-config-file"):
-            global_config_file = expanduser(a)
+            global_config_file = global_config_dir + expanduser(a)
         if o in ("-d", "--debug"):
             debug=True
 
 def process_options(opts):
     global loop, colors, verbose, no_confirm, add_numeric_key
+    if debug:
+        print("Process options: "+ str(opts))
     for o, a in opts:
         if o in ("-o", "--loop"):
             loop=True
@@ -193,8 +198,20 @@ def parse_command_file(filename):
                 if verbose:
                     print('line ',i,' is commented. Ignored.')
             elif line[0] == '-':
-                # if line is an option line
-                process_options(line)
+                # this line is an option line
+                if debug:
+                    print("Option line is: "+line)
+                try:
+                    (opts , args) = getopt.getopt(line.split(), "hlc:g:donvf1", ["help","local-config-only","config-file=","global-config-file=","debug","loop","no-colors","verbose","no-confirm","numeric-id"])
+                except getopt.GetoptError as err:
+                    # print help information and exit:
+                    print("In config file'"+filename+"': "+err) # will print something like "option -a not recognized"
+                    print("for help use --help")
+                    sys.exit(2)
+                if debug:
+                    print("opts: ",opts)
+                    print("args: ",args)
+                process_options(opts)
             else:
                 #(key_list,comment,command)= parse(line)
                 (keys,separator,rest_of_line) = line.partition(':')
@@ -305,15 +322,20 @@ def execute(choice):
         return 0
     else:
         (keys_list,comment,command) = commands[id]
-        confirmation = input(term_mode.NORMAL + term_mode.YELLOW + 'Run command ? '+ term_mode.NORMAL+'> '  + command +' '+ term_mode.TITLEYELLOW  + '[Y/n]' + term_mode.NORMAL)
-        if confirmation:
-            if confirmation[0] in 'nN':
-                if verbose:
-                    print('Abort')
+        if no_confirm:
+            if verbose:
+                print(term_mode.NORMAL + term_mode.YELLOW + 'Running command: '+ term_mode.NORMAL+'> '  + command + term_mode.NORMAL)
+            subprocess.run([command],shell=True)
+        else:
+            confirmation = input(term_mode.NORMAL + term_mode.YELLOW + 'Run command ? '+ term_mode.NORMAL+'> '  + command +' '+ term_mode.TITLEYELLOW  + '[Y/n]' + term_mode.NORMAL)
+            if confirmation:
+                if confirmation[0] in 'nN':
+                    if verbose:
+                        print('Abort')
+                else:
+                    subprocess.run([command],shell=True)
             else:
                 subprocess.run([command],shell=True)
-        else:
-            subprocess.run([command],shell=True)
     return 1
 
 def choose_command():
@@ -334,8 +356,6 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
     # etc., replacing sys.argv with argv in the getopt() call.
-    if debug:
-        print("argv: ",argv)
     # parse command line options
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hlc:g:donvf1", ["help","local-config-only","config-file=","global-config-file=","debug","loop","no-colors","verbose","no-confirm","numeric-id"])
@@ -348,6 +368,7 @@ def main(argv=None):
     # process cmdline-only options
     process_cmdline_options(opts)
     if debug:
+        print("argv: ",argv)
         print("opts: ",opts)
         print("args: ",args)
 
@@ -367,7 +388,17 @@ def main(argv=None):
             parse_command_file(global_config_file)
         except FileNotFoundError:
             print(term_mode.TITLEYELLOW + "Warning: no global config file '{}'".format(global_config_file)+term_mode.NORMAL )
-            #TODO propose to create one from template
+            ans = input(term_mode.YELLOW + "Do you want to create one from template ?"+ term_mode.TITLEYELLOW  + '[Y/n]'+term_mode.NORMAL )
+            if ans and (ans[0] in 'nN'):
+                 if verbose:
+                    print("No config file created")
+            else:
+                 if verbose:
+                    print("Create config file")
+                 #TODO more security checks
+                 os.makedirs(global_config_dir, exist_ok=True)
+                 copyfile( global_config_file_template , global_config_file )
+
 
     # read local config file
     try:
