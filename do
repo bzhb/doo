@@ -5,10 +5,42 @@
 #define DO_PY
 
 """do command
+NAME
+    do - utility to run user predefined commands
 
+SYNOPSIS
+    do [OPTIONS] [ID]
+
+DESCRIPTION
     Read command in the .do file in the local folder and execute the choosen command
 
-    .do format: each line should be in the format:
+
+COMMAND-LINE AND CONFIG FILES OPTIONS
+
+    --debug
+        Debug mode with additional prints
+
+    --config-file=FILE
+        Use the specified file instead of .do
+
+    --global_config_file=FILE
+        Use the specified file instead of ~/.config/do/do.conf
+
+    -g --no-global-config
+        Use only the config in the local folder
+
+    -v --verbose
+
+    -l --loop
+        After running a command the program doesn't quit and ask for running a new command, until the user hit q or ^C
+
+    -c --colors
+
+    -f --no-confirm
+        No confirmation is asked before running the command
+
+CONFIG FILES
+    .do format: each command line should be in the format:
         [id[,alternative_ids]:][comment]>command
     with :
         id : a unique identifier used to identify the command to run. Can contain any printable character. 
@@ -18,12 +50,14 @@
 
     if id is omitted, one will be automatically generated (from the line number and random characters).
     If no id is given when running the do command, the command with identifier "default" is going to be executed
-    examples:
+
+    examples of config:
         0: default command > ls -l
         1, kill the fox > killall firefox
         > ls -a
-
-OPTIONS
+EXAMPLES
+AUTHOR
+COPYRIGHT
 """
 import os
 import shutil
@@ -35,24 +69,30 @@ import string
 
 #TODO:
 # * nice interrupt with ^C
+# * remove Traceback when doing ^C
 # * read global config file
 # * loop mode
 # * parse commandline
 # * verify the program is running with python3
 # * add a q,quit key in loop mode
-# * write the modified key to .do file when there is duplicate keys
-# * add numeric keys to every command
+# * write the modified key to .do file when there is duplicate keys (option -w ?)
+# * add numeric keys to every command (option --numeric-id)
 # * write numeric keys into .do files
 # * add calculation for the space taken by keys / comment / command
 # * put keys in bold font
 # * ignore lines with no commands
+# * remove empty keys (for instance if there is a trailing comma)
+# * use --more if there is not enough lines
+# * add Warning when there is no options file in the current directory
 
 # Default options:
-debug = True
+#debug = True
+debug = False
 local_config_file ='.do'
 global_config_file ='~/.config/do/do.conf'
 no_global_config = False
-verbose = True
+#verbose = True
+verbose = False
 #loop = True
 loop = False
 colors = False
@@ -67,8 +107,27 @@ max_keys_width = 0
 max_comment_width = 0
 max_command_width = 0
 
+class term_mode:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   TITLEBLUE = '\033[0;37;44m'
+   GREEN = '\033[92m'
+   TITLEGREEN = '\033[0;30;42m'
+   TITLE = '\033[0;30;47m'
+   YELLOW = '\033[93m'
+   TITLEYELLOW = '\033[0;30;43m'
+   RED = '\033[91m'
+   TITLERED = '\033[0;37;41m'
+   TITLE = '\033[0;30;47m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   NORMAL = '\033[0m'
 
-def process(arg):
+
+
+def process_options(opts_string):
     pass
 
 def generate_unique_key(key):
@@ -81,13 +140,17 @@ def parse_command_file(filename):
     global max_keys_width,max_comment_width,max_command_width
     with open(filename) as command_file:
         for i,line in enumerate(command_file):
-            if line[0] == '#':
+            line = line.strip()
+            if line == '':
+                if verbose:
+                    print('line ',i,' is empty. Ignored.')
+            elif line[0] == '#':
                 # commented lines get ignored
                 if verbose:
                     print('line ',i,' is commented. Ignored.')
-            elif False:
+            elif line[0] == '-':
                 # if line is an option line
-                pass #TODO: deal with options lines
+                process_options(line)
             else:
                 #(key_list,comment,command)= parse(line)
                 (keys,separator,rest_of_line) = line.partition(':')
@@ -161,12 +224,11 @@ def print_available_commands():
     if max_comment_width == 0:
         show_comments = False
         comment_field_width = 0
-
+    print(term_mode.TITLEBLUE,'Id(s)'.ljust(keys_field_width),end=' :')
     if show_comments:
-        print('Id(s)'.ljust(keys_field_width),'| ','Comment'.ljust(comment_field_width),'| ','Command'.ljust(command_field_width))
-    else:
-        print('Id(s)'.ljust(keys_field_width),'| ','Command'.ljust(command_field_width))
-    print(''.ljust(keys_field_width + comment_field_width + command_field_width + 4,'-'))
+        print(term_mode.TITLEGREEN,'Comment'.ljust(comment_field_width),end='')
+    print(term_mode.TITLE,'> Command'.ljust(command_field_width),term_mode.NORMAL)
+    #print(''.ljust(keys_field_width + comment_field_width + command_field_width + 4,'-'))
     for (keys_list,comment,command) in commands.values() :
         keys_str = ''
         for key in keys_list:
@@ -175,28 +237,29 @@ def print_available_commands():
         keys_str = adjust_width(keys_str,keys_field_width)
         comment = adjust_width(comment,comment_field_width)
         command = adjust_width(command,command_field_width)
+        print(term_mode.BLUE+term_mode.BOLD,keys_str,':',end=term_mode.NORMAL)
         if show_comments:
-            print(keys_str,': ',comment,'>',command)
-        else:
-            print(keys_str,':>',command)
+            print(term_mode.GREEN,'',end=comment)
+        print(term_mode.NORMAL,'>',command)
 
 def execute(choice):
     id = keys_to_id.get(choice)
     if id == None:
-        print("This identifier doesn't exist. Abort.")
+        print(term_mode.TITLERED,"This id doesn't exist. Abort.")
     else:
         (keys_list,comment,command) = commands[id]
-        confirmation = input('Run command ? > ' + command + ' [Y/n]')
+        confirmation = input(term_mode.YELLOW + 'Run command ? '+ term_mode.NORMAL+'> '  + command +' '+ term_mode.TITLEYELLOW  + '[Y/n]' + term_mode.NORMAL)
         if confirmation:
             if confirmation[0] in 'nN':
-                print('Abort')
+                if verbose:
+                    print('Abort')
             else:
                 subprocess.run([command],shell=True)
         else:
             subprocess.run([command],shell=True)
 
 def choose_command():
-    choice = input('Enter id of the command you want to run: ').strip()
+    choice = input(term_mode.BLUE + term_mode.BOLD + 'Enter id of the command to run:'+ term_mode.NORMAL+' '+ term_mode.BLUE+ term_mode.BOLD).strip()
     if not choice:
         choice='default'
     if verbose:
