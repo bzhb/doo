@@ -9,57 +9,87 @@ NAME
     doo - utility to run user predefined commands
 
 SYNOPSIS
-    doo [OPTIONS] [ID]
+    doo [OPTIONS] [ID] [COMMAND PARAMETERS]
 
 DESCRIPTION
-    Read command in the .doo file in the local folder and execute the choosen command
+    Console utility to execute user-defined command fron a .doo file in the local folder.
 
 
-COMMAND-LINE AND CONFIG FILES OPTIONS
+COMMAND-LINE ONLY OPTIONS
+
+    -h --help
+        Show help
+
+    -i --file=FILE
+        Use the specified configuration file from local directory instead of .doo
+
+    -g --global-file=FILENAME
+        Use the file ~/.config/doo/FILENAME.doo instead of local .doo file
+        If no FILENAME is specified, reading ~/.config/doo/default.doo
 
     -d --debug
         Debug mode with additional prints
 
-    -c --config-file=FILE
-        Use the specified file instead of .doo
 
-    -g --global_config_file=FILE
-        Use the specified file instead of ~/.config/doo/doo.conf
-
-    -l --local-config-only
-        Use only the config in the local folder
-
-    -v --verbose
-
-    -o --loop
-        After running a command the program doesn't quit and ask for running a new command, until the user hit q or ^C
-
-    -c --no-colors
+COMMAND-LINE AND CONFIG FILES OPTIONS
 
     -f --no-confirm
         No confirmation is asked before running the command
 
-    -n --numeric-id
-        Add a numeric id to every command without numeric id defined in config files
+    -F --force-confirm
+        User is asked confirmation before running the command. This is the default behavior, this option is only necessary to superseed options set in a config file
 
-CONFIG FILES
+    -o --loop
+        After running a command the program doesn't quit and ask for running a new command, until the user hit q or ^C
+
+    -v --verbose
+
+    -c --no-colors
+        disable colors
+
+    -C --force-colors
+        This is the default behavior, this option is only necessary to superseed options set in a config file
+
+    -w --write-ids
+        Add a numeric id to every command without numeric id defined in config files
+    -s --standardize (NOT IMPLEMENTED)
+        edit the command file to put it the standard format (add missing delemiters and spaces to align text)
+
+LOCAL COMMAND FILE
+    The command file in the local directory should be named .doo (or otherwise it is needed to use --file option).
+
     .doo format: each command line should be in the format:
         [id[,alternative_ids]:][comment]>command
+    
     with :
-        id : a unique identifier used to identify the command to run. Can contain any printable character. 
+        id             : a unique identifier used to identify the command to run.
         alternative_ids: one or more optional ids separated by a comma.
-        comment: an optional comment or description on the command
-        command: the actual command to run
+        comment        : an optional comment or description on the command
+        command        : the actual command to run
 
-    if id is omitted, one will be automatically generated (from the line number and random characters).
+    If id is omitted, one will be automatically generated (from the line number and random characters).
     If no id is given when running the doo command, the command with identifier "default" is going to be executed
 
-    examples of config:
+    examples of config in .doo file:
         0: default command > ls -l
         1, kill the fox > killall firefox
         > ls -a
+
+GLOBAL CONFIG FILES
+    Global config files are in the ~/.config/doo/ repository
+
+    doo.conf : this file is always parsed when doo command is used. This the designated location to define user default options. Although it is not recommended, it is possible to insert command lines in this file. In this case thoose commands will appear in the table everytime doo is run.
+
+    FILENAME.doo : It is possible (and encouraged) to create or modify other global command files like FILENAME.doo to be used with the -g options, like : doo -g FILENAME.
+
 EXAMPLES
+    doo
+    doo COMMAND_KEY
+    doo -g system reboot (use ~/.config/doo/system.doo)
+
 AUTHOR
+    Fargetton Renan <renan.fargetton <at> .com > 2016
+
 COPYRIGHT
    Copyright (C) 2016  Fargetton Renan 
 
@@ -93,16 +123,21 @@ from os.path import expanduser
 #init()
 
 #TODO:
+# * finish changing the behavior to :
+#     * always read doo.conf
+#     * only read a -g or local file
+# * Implement all the changes for options described in --help
+# * add numeric keys to every command (force what previously was option --numeric-id)
 # * parse command line
 # * use --more if there is not enough lines
 # * deal with the situation where there is no space for keys / comment / command
 # * deal with terminals that don't support colors (option --no-colors)
-# * add numeric keys to every command (option --numeric-id)
-# * write numeric keys into .doo files
+# * add option to write numeric keys into .doo files
 # * write the modified key to .doo file when there is duplicate keys (option -w ?)
 # * verify the program is running with python3
-# * make --local-config-only option working from .doo file (need to rearange order of read files)
-# * 
+# * deal with potential problems when several "default are inserted", especially from different files."
+# * predictable ids : always generate the same unique_key : hash functions ? Or force -w option ?
+# * reorganise code in several files + separate package build
 # * 
 # * 
 
@@ -132,13 +167,18 @@ class term_mode:
    NORMAL = '\033[0m'
 
 
-global_config_file_template = '/usr/share/doo/doo.conf'
 
+# Options for testing:
+global_config_file_template = 'usr_share/doo.conf'
+command_file_template = 'usr_share/template.doo'
+global_config_dir = expanduser('config/')
 # Default options:
-local_config_only = False
-global_config_dir = expanduser('~/.config/doo/')
+#global_config_file_template = '/usr/share/doo/doo.conf'
+#global_command_file_template = '/usr/share/doo/template.doo'
+#global_config_dir = expanduser('~/.config/doo/')
 global_config_file = global_config_dir + 'doo.conf'
-local_config_file = '.doo'
+global_command_file = global_config_dir + 'default.doo'
+local_command_file = '.doo'
 debug = False
 loop = False
 colors = True
@@ -146,35 +186,43 @@ verbose = False
 no_confirm = False
 add_numeric_key = False
 
-def process_cmdline_options(opts):
-    global local_config_only,global_config_file,local_config_file,debug
+def process_cmdline_only_options(opts):
+    global global_command_file,local_command_file,debug
+    use_a_global_command_file = False
     for o, a in opts:
         if o in ("-h", "--help"):
             print(__doc__)
             sys.exit(0)
-        if o in ("-l", "local-config-only"):
-            local_config_only = True
-        if o in ("-c", "--config-file"):
-            local_config_file = expanduser(a)
-        if o in ("-g", "--global-config-file"):
-            global_config_file = global_config_dir + expanduser(a)
+        if o in ("-i", "--file"):
+            local_command_file = expanduser(a)
+        if o in ("-g", "--global-file"):
+            global_command_file = global_config_dir + expanduser(a) + ".doo"
+            if debug :
+                print("global command file a=" + a)
+            #TODO deal with empty "a" : "doo -g " should use default.doo or ask
+            use_a_global_command_file = True
         if o in ("-d", "--debug"):
             debug=True
+    return use_a_global_command_file
 
 def process_options(opts):
     global loop, colors, verbose, no_confirm, add_numeric_key
     if debug:
         print("Process options: "+ str(opts))
     for o, a in opts:
-        if o in ("-o", "--loop"):
-            loop=True
-        if o in ("-n", "--no-colors"):
-            colors=False
-        if o in ("-v", "--verbose"):
-            verbose=True
         if o in ("-f", "--no-confirm"):
             no_confirm=True
-        if o in ("-1", "--numeric-id"):
+        if o in ("-F", "--force-confirm"):
+            no_confirm=False
+        if o in ("-v", "--verbose"):
+            verbose=True
+        if o in ("-o", "--loop"):
+            loop=True
+        if o in ("-c", "--no-colors"):
+            colors=False
+        if o in ("-C", "--force-colors"):
+            colors=True
+        if o in ("-w", "--numeric-id"):
             add_numeric_key=True
 
 def generate_unique_key(key):
@@ -261,6 +309,27 @@ def parse_command_file(filename):
                 if l > max_command_width:
                     max_command_width = l
                 commands[n+i] = ( keys_list , comment , command )
+
+def check_then_parse_file(filename,str_filetype,template):
+    if debug:
+        print("Using ",str_filetype," file: ", filename)
+    try:
+        parse_command_file(filename)
+    except FileNotFoundError:
+        print(term_mode.TITLEYELLOW + "Warning: no {} file '{}'".format(str_filetype,filename)+term_mode.NORMAL )
+        ans = input(term_mode.YELLOW + "Do you want to create one from template ?"+ term_mode.TITLEYELLOW  + '[Y/n]'+term_mode.NORMAL )
+        if ans and (ans[0] in 'nN'):
+             if verbose:
+                print("No ",str_filetype," file created")
+        else:
+             if verbose:
+                print("Creating ",str_filetype," file...")
+             #TODO more security checks
+             os.makedirs(global_config_dir, exist_ok=True)
+             copyfile( template , filename )
+             if verbose:
+                print("Done")
+             parse_command_file(filename)
 
 def adjust_width(s,width):
     #TODO: in case the string is truncated, add '...'
@@ -354,27 +423,27 @@ def choose_command():
         execute(choice)
 
 def main(argv=None):
-    global local_config_only
     if argv is None:
         argv = sys.argv
     # etc., replacing sys.argv with argv in the getopt() call.
     # parse command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hlc:g:donvf1", ["help","local-config-only","config-file=","global-config-file=","debug","loop","no-colors","verbose","no-confirm","numeric-id"])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:g:dfFovcCws", ["help","file=","global-file=","debug","no-confirm","force-confirm","loop","verbose","no-colors","force-colors""write-ids","standardize"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err) # will print something like "option -a not recognized"
         print("for help use --help")
         sys.exit(2)
 
-    # process cmdline-only options
-    process_cmdline_options(opts)
+    # process cmdline-only options (needs to be early for debug flag)
+    use_a_global_command_file = process_cmdline_only_options(opts)
+
     if debug:
         print("argv: ",argv)
         print("opts: ",opts)
         print("args: ",args)
 
-    # process arguments
+    # process arguments into a string
     key =''
     for w in args:
         key += str(w) + ' '
@@ -383,34 +452,20 @@ def main(argv=None):
         print("cmdline key: '" + key + "'")
 
     # read global config file
+    check_then_parse_file(global_config_file,"global config",global_config_file_template)
+
+    # read choosen command file
     if debug:
-        print("local_config_only=" + str(local_config_only) )
-    if not local_config_only:
-        if debug:
-            print("Using global config file: ",global_config_file)
-        try:
-            parse_command_file(global_config_file)
-        except FileNotFoundError:
-            print(term_mode.TITLEYELLOW + "Warning: no global config file '{}'".format(global_config_file)+term_mode.NORMAL )
-            ans = input(term_mode.YELLOW + "Do you want to create one from template ?"+ term_mode.TITLEYELLOW  + '[Y/n]'+term_mode.NORMAL )
-            if ans and (ans[0] in 'nN'):
-                 if verbose:
-                    print("No config file created")
-            else:
-                 if verbose:
-                    print("Create config file")
-                 #TODO more security checks
-                 os.makedirs(global_config_dir, exist_ok=True)
-                 copyfile( global_config_file_template , global_config_file )
-
-
-    # read local config file
-    try:
-        parse_command_file(local_config_file)
-    except FileNotFoundError:
-        print(term_mode.TITLEYELLOW + "Warning: no '{}' file in the current directory".format(local_config_file)+term_mode.NORMAL )
+        print("Using global commands ? : " + str(use_a_global_command_file) )
+    if use_a_global_command_file:
+        # read global command file
+        check_then_parse_file(global_command_file,"global command",command_file_template)
+    else:
+        # read local command file
+        check_then_parse_file(local_command_file,"command",command_file_template)
 
     # process the rest of command lines options
+    # nb : command lines must be processed after command file because it can overwrite options
     process_options(opts)
 
     if debug:
