@@ -9,11 +9,13 @@ NAME
     doo - utility to run user predefined commands
 
 SYNOPSIS
-    doo [OPTIONS] [ID] [COMMAND PARAMETERS]
+    doo [OPTIONS] [COMMAND ID]
 
 DESCRIPTION
     Console utility to execute user-defined command fron a .doo file in the local folder.
 
+COMMAND ID
+    Command identifier in the command file (.doo).
 
 COMMAND-LINE ONLY OPTIONS
 
@@ -91,7 +93,7 @@ AUTHOR
     Fargetton Renan <renan.fargetton <at> .com > 2016
 
 COPYRIGHT
-   Copyright (C) 2016  Fargetton Renan 
+   Copyright (C) 2016-2017  Fargetton Renan 
 
    GNU GPLv3 or later
 
@@ -123,22 +125,19 @@ from os.path import expanduser
 #init()
 
 #TODO:
-# * finish changing the behavior to :
-#     * always read doo.conf
-#     * only read a -g or local file
-# * Implement all the changes for options described in --help
+# * add option to write numeric keys into .doo files
 # * add numeric keys to every command (force what previously was option --numeric-id)
+# * Implement all the changes for options described in --help
 # * parse command line
 # * use --more if there is not enough lines
 # * deal with the situation where there is no space for keys / comment / command
 # * deal with terminals that don't support colors (option --no-colors)
-# * add option to write numeric keys into .doo files
 # * write the modified key to .doo file when there is duplicate keys (option -w ?)
 # * verify the program is running with python3
 # * deal with potential problems when several "default are inserted", especially from different files."
 # * predictable ids : always generate the same unique_key : hash functions ? Or force -w option ?
 # * reorganise code in several files + separate package build
-# * 
+# * propose to edit command/config file when created
 # * 
 
 commands = {}
@@ -167,18 +166,21 @@ class term_mode:
    NORMAL = '\033[0m'
 
 
-
+no_system_install=False
 # Options for testing:
-global_config_file_template = 'usr_share/doo.conf'
-command_file_template = 'usr_share/template.doo'
-global_config_dir = expanduser('config/')
-# Default options:
-#global_config_file_template = '/usr/share/doo/doo.conf'
-#global_command_file_template = '/usr/share/doo/template.doo'
-#global_config_dir = expanduser('~/.config/doo/')
+if no_system_install:
+    global_config_file_template = 'usr_share/doo.conf'
+    command_file_template = 'usr_share/template.doo'
+    global_config_dir = expanduser('config/')
+else:
+    global_config_file_template = '/usr/share/doo/doo.conf'
+    command_file_template = '/usr/share/doo/template.doo'
+    global_config_dir = expanduser('~/.config/doo/')
 global_config_file = global_config_dir + 'doo.conf'
 global_command_file = global_config_dir + 'default.doo'
 local_command_file = '.doo'
+
+# Default options:
 debug = False
 loop = False
 colors = True
@@ -251,7 +253,7 @@ def parse_command_file(filename):
                 if debug:
                     print("Option line is: "+line)
                 try:
-                    (opts , args) = getopt.getopt(line.split(), "hlc:g:donvf1", ["help","local-config-only","config-file=","global-config-file=","debug","loop","no-colors","verbose","no-confirm","numeric-id"])
+                    (opts , args) = getopt.getopt(line.split(), "hi:g:dfFovcCws", ["help","file=","global-file=","debug","no-confirm","force-confirm","loop","verbose","no-colors","force-colors""write-ids","standardize"])
                 except getopt.GetoptError as err:
                     # print help information and exit:
                     print("In config file'"+filename+"': "+err) # will print something like "option -a not recognized"
@@ -332,11 +334,20 @@ def check_then_parse_file(filename,str_filetype,template):
              parse_command_file(filename)
 
 def adjust_width(s,width):
-    #TODO: in case the string is truncated, add '...'
-    return s[:width].ljust(width)
+    if len(s) > width:
+        # string needs to be truncated
+        if width >= 1:
+            return (s[:(width-1)]+'…').ljust(width)
+        else:
+            # given width is 0 (or negative) return empty string
+            return ""
+    else:
+        return s.ljust(width)
 
 def print_command_menu():
     global max_keys_width,max_comment_width,max_command_width
+    show_comments = True
+    show_commands = True
     keys_field_width = 20
     comment_field_width = 40
     command_field_width = 40
@@ -360,18 +371,36 @@ def print_command_menu():
         #TODO though choice here about what to scrap
         if debug:
             print("The table doesn't fit into the terminal")
-        keys_field_width = max_keys_width
-        comment_field_width = max_comment_width
-        command_field_width = max_command_width
-        pass
-    show_comments = True
+        if max_keys_width + 3 < term_width :
+            # we dispay all the keys (it fits)
+            keys_field_width = max_keys_width
+            remaining_width = term_width - (max_keys_width + 3)
+            if max_comment_width == 0:
+                # no comments.
+                comment_field_width = max_comment_width
+                command_field_width = remaining_width
+            else:
+                # split the remaing space 30%/70%
+                comment_field_width = min(max_keys_width,remaining_width*3//10 -1 )
+                command_field_width = min(max_command_width,remaining_width - comment_field_width -3)
+        else:
+            # it is needed to scrap the keys
+            keys_field_width = term_width-1
+            comment_field_width = 0
+            command_field_width = 0
+            show_commands = False
+            show_comments = False
     if max_comment_width == 0:
         show_comments = False
         comment_field_width = 0
     print(term_mode.TITLEBLUE+'Id(s)'.ljust(keys_field_width),end=':')
     if show_comments:
         print(term_mode.TITLEGREEN+' Comment'.ljust(comment_field_width),end=' ')
-    print(term_mode.TITLE+'> Command'.ljust(command_field_width+2)+term_mode.NORMAL)
+    if show_commands:
+        print(term_mode.TITLE+'> Command'.ljust(command_field_width+2)+term_mode.NORMAL)
+    else:
+        # return to next line and normal mode
+        print(term_mode.NORMAL)
     for (keys_list,comment,command) in commands.values() :
         keys_str = ''
         for key in keys_list:
@@ -383,7 +412,11 @@ def print_command_menu():
         print(term_mode.BLUE+term_mode.BOLD + keys_str + ':',end=term_mode.NORMAL)
         if show_comments:
             print(term_mode.GREEN+' ',end=comment)
-        print(term_mode.NORMAL+'> '+command)
+        if show_commands:
+            print(term_mode.NORMAL+'> '+command)
+        else:
+            # return to next line
+            print('')
 
 def execute(choice):
     id = keys_to_id.get(choice)
