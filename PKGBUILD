@@ -1,6 +1,8 @@
 # Author:  2016 Renan Fargetton < email >
 
 pkgname=doo
+#pkgname=doo-git
+#_pkgname=doo
 pkgver=0.0.3
 pkgrel=1
 epoch=
@@ -9,8 +11,11 @@ arch=('any')
 url=""
 license=('GNU GPLv3 or later')
 depends=('python')
+provides=('doo')
+conflicts=('doo')
 optdepends=()
 install="doo.install"
+#source=('git+https://github.com/user/doo')
 
 build() {
 	#mkdir -p $srcdir/
