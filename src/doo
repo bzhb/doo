@@ -119,22 +119,19 @@ import subprocess
 import getopt
 import random
 import string
+import termios, tty
 from os.path import expanduser
 # for windows compability :
 #from colorama import init
 #init()
 
 #TODO:
-# * add option to write numeric keys into .doo files
 # * add numeric keys to every command (force what previously was option --numeric-id)
 # * Implement all the changes for options described in --help
 # * parse command line
 # * use --more if there is not enough lines
-# * deal with the situation where there is no space for keys / comment / command
-# * deal with terminals that don't support colors (option --no-colors)
 # * write the modified key to .doo file when there is duplicate keys (option -w ?)
 # * verify the program is running with python3
-# * deal with potential problems when several "default are inserted", especially from different files."
 # * predictable ids : always generate the same unique_key : hash functions ? Or force -w option ?
 # * reorganise code in several files + separate package build
 # * propose to edit command/config file when created
@@ -379,10 +376,11 @@ def print_command_menu():
     #rows, columns = os.popen('stty size', 'r').read().split()
     term = shutil.get_terminal_size((80, 20))
     term_width = term.columns
+    term_height = term.lines
 
     # We assign the optimal width for each field
-    if global_vars.max_keys_width < 5:
-        keys_field_width = 5 # len("Id(s)")
+    if global_vars.max_keys_width < 6:
+        keys_field_width = 6 # len("Id(s):")
     else:
         keys_field_width = global_vars.max_keys_width +1 # +1 is for ':'
     if global_vars.max_comment_width == 0:
@@ -444,6 +442,7 @@ def print_command_menu():
     if global_vars.max_comment_width == 0:
         show_comments = False
         comment_field_width = 0
+
     print(term_mode.TITLEBLUE+adjust_width('Id(s)',keys_field_width-1),end=':')
     if show_comments:
         print(term_mode.TITLEGREEN+adjust_width(' Comment ',comment_field_width),end='')
@@ -452,7 +451,30 @@ def print_command_menu():
     else:
         # return to next line and normal mode
         print(term_mode.NORMAL)
+    printed_lines = 1
     for (keys_list,comment,command) in data.commands.values() :
+        if printed_lines == term_height-1 :
+            # wait for more
+            stdinFileDesc = sys.stdin.fileno() #store stdin's file descriptor
+            oldStdinTtyAttr = termios.tcgetattr(stdinFileDesc) #save stdin's tty attributes so I can reset it later
+
+            try:
+                print(term_mode.TITLEBLUE + "-- More --" + term_mode.NORMAL,end="\r")
+                os.system('setterm -cursor off')
+                tty.setraw(stdinFileDesc) #set the input mode of stdin so that it gets added to char by char rather than line by line
+                char = sys.stdin.read(1) #read 1 byte from stdin (indicating that a key has been pressed)
+                if char == "q":
+                     if options.verbose:
+                        print('Exit')
+                     sys.exit(0) # or 1, or whatever
+                #TODO deal with " " and "q"
+                #TODO hide cursor
+            finally:
+                termios.tcsetattr(stdinFileDesc, termios.TCSADRAIN, oldStdinTtyAttr) #reset stdin to its normal behavior
+                os.system('setterm -cursor on')
+                #print("\r") # bring back the cursor at the beginning of the line (to remove "-- More --")
+
+            printed_lines = 0
         keys_str = ''
         for key in keys_list:
             keys_str += key + ','
@@ -468,6 +490,7 @@ def print_command_menu():
         else:
             # return to next line
             print(term_mode.NORMAL)
+        printed_lines += 1
 
 def execute(choice):
     id = data.keys_to_id.get(choice)
