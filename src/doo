@@ -129,13 +129,12 @@ from os.path import expanduser
 # * add numeric keys to every command (force what previously was option --numeric-id)
 # * Implement all the changes for options described in --help
 # * parse command line
-# * use --more if there is not enough lines
 # * write the modified key to .doo file when there is duplicate keys (option -w ?)
 # * verify the program is running with python3
 # * predictable ids : always generate the same unique_key : hash functions ? Or force -w option ?
 # * reorganise code in several files + separate package build
 # * propose to edit command/config file when created
-# * 
+# * make better template and default conf file
 
 class data:
     commands = {}
@@ -467,8 +466,6 @@ def print_command_menu():
                      if options.verbose:
                         print('Exit')
                      sys.exit(0) # or 1, or whatever
-                #TODO deal with " " and "q"
-                #TODO hide cursor
             finally:
                 termios.tcsetattr(stdinFileDesc, termios.TCSADRAIN, oldStdinTtyAttr) #reset stdin to its normal behavior
                 os.system('setterm -cursor on')
