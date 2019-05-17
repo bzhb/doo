@@ -49,8 +49,9 @@ COMMAND-LINE AND CONFIG FILES OPTIONS
     -C --force-colors
         This is the default behavior, this option is only necessary to superseed options set in a config file
 
-    -w --write-ids
-        Add a numeric id to every command without numeric id defined in config files
+    -n --no-numkey
+        Remove a numeric id to every command without numeric id defined in config files
+
     -s --standardize (NOT IMPLEMENTED)
         edit the command file to put it the standard format (add missing delemiters and spaces to align text), put an intro for options, current .doo file is moved to .doo.old
 
@@ -87,10 +88,10 @@ EXAMPLES
     doo -g system reboot (use ~/.config/doo/system.doo)
 
 AUTHOR
-    Fargetton Renan <renan.fargetton <at> .com > 2016
+    Fargetton Renan <renan.fargetton <at> .com > 2016 - 2019
 
 COPYRIGHT
-   Copyright (C) 2016-2017  Fargetton Renan 
+   Copyright (C) 2016-2019  Fargetton Renan 
 
    GNU GPLv3 or later
 

@@ -1,4 +1,14 @@
-#  This is the template file for doo command file
+#!/usr/bin/env python
+# -*- coding: UTF8 -*-
+
+from shared_data_and_options import *
+
+def write_file(file_str,dest_path):
+    pass
+
+# Prerequisite : global data.commands and data.keys_to_id has already been populated
+def standardize(config_file_path):
+    intro ="""# This is local configuration file for doo program
 #
 #    .doo format: each command line should be in the format:
 #        [id[,alternative_ids]:][comment]>command
@@ -18,6 +28,5 @@
 #        > ls -a
 #
 #id : comment > command
-0,help: show help for doo program > doo --help
-1,edit:> vim doo *.py
-test :> ls
+"""
+    pass

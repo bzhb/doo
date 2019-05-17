@@ -12,6 +12,7 @@ def generate_unique_key(key):
         # if key is already used, append a random ascii character to the key
         #key += random.choice(string.ascii_lowercase)
         key += random.choice(string.digits)
+
     return key
 
 def parse_command_file(filename):

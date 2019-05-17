@@ -9,6 +9,7 @@ from os.path import expanduser
 class data:
     commands = {}
     keys_to_id = {}
+
 class global_vars:
     max_keys_width = 0
     max_comment_width = 0
@@ -21,8 +22,9 @@ class options:
     colors = True
     verbose = False
     no_confirm = False
-    add_numeric_key = False
+    add_numeric_key = True
     has_default_command = False
+    standardize = False
 
     no_system_install=False
     if no_system_install:

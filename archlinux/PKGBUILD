@@ -1,12 +1,12 @@
-# Author:  2016 Renan Fargetton < email >
+# Author:  2016 - 2019 Renan Fargetton < email >
 
 pkgname=doo
 #pkgname=doo-git
 #_pkgname=doo
-pkgver=0.0.3
+pkgver=0.0.4
 pkgrel=1
 epoch=
-pkgdesc="Utility to run user-predefined commands from a list"
+pkgdesc="Command line utility to launch user-predefined commands from a list"
 arch=('any')
 url=""
 license=('GNU GPLv3 or later')

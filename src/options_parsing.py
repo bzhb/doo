@@ -24,8 +24,8 @@ def process_cmdline_only_options(opts):
         if o in ("-d", "--debug"):
             options.debug=True
         #nb: add_numeric_key is not a commandline-only option but it must be processed early nontheless
-        if o in ("-w", "--numeric-id"):
-            options.add_numeric_key=True
+        if o in ("-n", "--no-numkey"):
+            options.add_numeric_key=False
     return use_a_global_command_file
 
 def process_options(opts):
@@ -44,12 +44,14 @@ def process_options(opts):
             options.colors=False
         if o in ("-C", "--force-colors"):
             options.colors=True
-        if o in ("-w", "--numeric-id"):
-            options.add_numeric_key=True
+        if o in ("-n", "--no-numkey"):
+            options.add_numeric_key=False
+        if o in ("-s", "--standardize"):
+            options.standardize=True
 
 def sort_options_and_arguments(line):
     try:
-        return getopt.getopt(line, "hi:g:dfFovcCws", ["help","file=","global-file=","debug","no-confirm","force-confirm","loop","verbose","no-colors","force-colors""write-ids","standardize"])
+        return getopt.getopt(line, "hi:g:dfFovcCns", ["help","file=","global-file=","debug","no-confirm","force-confirm","loop","verbose","no-colors","force-colors""no-numkey","standardize"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err) # will print something like "option -a not recognized"

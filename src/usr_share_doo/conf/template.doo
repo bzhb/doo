@@ -19,5 +19,3 @@
 #
 #id : comment > command
 0,help: show help for doo program > doo --help
-1,edit:> vim doo *.py
-test :> ls
