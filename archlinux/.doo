@@ -1,0 +1,6 @@
+--no-confirm
+0,default :> doo -fv make; doo -fv install
+1,make: > makepkg -sf
+2,install:> sudo pacman -U doo-0.0.3-1-any.pkg.tar.xz
+3,rm conf:> rm ~/.config/doo/doo.conf
+4,edit :> vim .doo

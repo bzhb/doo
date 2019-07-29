@@ -1,0 +1,9 @@
+*.tmp
+*.swp
+colorama
+__pycache__
+trash
+misc
+build
+dist
+Doo.egg-info
