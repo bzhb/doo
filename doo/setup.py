@@ -54,7 +54,7 @@ setup(
     project_urls={
         # "Bug Tracker": "https://",
         # "Documentation": "https://",
-        # "Source Code": "https:///",
+        "Source Code": "https://github.com/bzhb/doo",
     },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

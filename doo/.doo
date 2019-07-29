@@ -21,4 +21,4 @@
 build :> python setup.py build
 install :> sudo python setup.py install
 default :> doo build; doo install
-ls
+uninstall,remove :>sudo pip uninstall doo
