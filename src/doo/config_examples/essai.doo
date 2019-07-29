@@ -1,3 +1,0 @@
-# this is essai.doo
-0,default: default command (do nothing) > 
-1,essai:> echo "Hello World!"
