@@ -3,7 +3,7 @@
 pkgname=doo
 #pkgname=doo-git
 #_pkgname=doo
-pkgver=0.0.4
+pkgver=0.0.4.1
 pkgrel=1
 epoch=
 pkgdesc="Command line utility to launch user-predefined commands from a list"
@@ -19,17 +19,18 @@ install="doo.install"
 
 build() {
 	#mkdir -p $srcdir/
-	cd ../$srcdir/
+	#cd ../$srcdir/
 }
 
 package() {
-	cd ../$srcdir/
-	install -D -m 0755 doo "$pkgdir/usr/bin/doo"
+	cd ${pkgname}-${pkgver}
+	python setup.py install --root="${pkgdir}" --optimize=1
+	#cd ../$srcdir/
+	#install -D -m 0755 doo "$pkgdir/usr/bin/doo"
 	install -D -m 0644 usr_share/doo.conf "$pkgdir/usr/share/doo/doo.conf"
 	install -D -m 0644 usr_share/template.doo "$pkgdir/usr/share/doo/template.doo"
 }
 
 #package() {
-#  cd ${pkgname}-${pkgver}
 #  python setup.py install --root="${pkgdir}" --optimize=1
 #}

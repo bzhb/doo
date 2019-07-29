@@ -42,7 +42,7 @@ setup(
     # La syntaxe est "nom-de-commande-a-creer = package.module:fonction".
     entry_points = {
         'console_scripts': [
-            'dooo = doo.main:main',
+            'doo = doo.main:main',
         ],
     },
     # metadata to display on PyPI
