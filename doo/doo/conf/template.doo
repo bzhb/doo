@@ -1,0 +1,21 @@
+#  This is a configuration file for the doo program
+#
+#    .doo format: each command line should be in the format:
+#        [id[,alternative_ids]:][comment]>command
+#    
+#    with :
+#        id             : a unique identifier used to identify the command to run. 
+#        alternative_ids: one or more optional ids separated by a comma.
+#        comment        : an optional comment or description on the command:
+#        command        : the actual command to run
+# 
+#    If id is omitted, one will be automatically generated.
+#    One command can have the special identifier "default"
+# 
+#    examples of command lines in .doo files:
+#        0: default command > ls -l
+#        1, kill the fox > killall firefox
+#        > ls -a
+#
+#id    : comment                   > command
+0,help : show help for doo program > doo --help

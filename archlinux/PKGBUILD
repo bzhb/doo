@@ -19,13 +19,17 @@ install="doo.install"
 
 build() {
 	#mkdir -p $srcdir/
-	cd $srcdir/
+	cd ../$srcdir/
 }
 
 package() {
-	cd $srcdir/
+	cd ../$srcdir/
 	install -D -m 0755 doo "$pkgdir/usr/bin/doo"
 	install -D -m 0644 usr_share/doo.conf "$pkgdir/usr/share/doo/doo.conf"
 	install -D -m 0644 usr_share/template.doo "$pkgdir/usr/share/doo/template.doo"
 }
 
+#package() {
+#  cd ${pkgname}-${pkgver}
+#  python setup.py install --root="${pkgdir}" --optimize=1
+#}
