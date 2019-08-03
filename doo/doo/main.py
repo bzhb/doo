@@ -12,8 +12,6 @@
 
 """
 #TODO:
-# * check : add numeric keys to every command (force what is currently --numeric-id)
-# * 
 # * finish separate package build
 #   * check for dependencies
 # * Implement all the changes for options described in --help
@@ -32,6 +30,7 @@
 # * make better template and default conf file
 # * tests !
 # * default command to execute : default + d,D,0 ? 
+# * 
 # * 
 
 import sys

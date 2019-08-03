@@ -67,7 +67,6 @@ setup(
         'License :: OSI Approved :: GNU General Public Licence version 3 or later'
     ]
 
-    # could also include long_description, download_url, etc.
 )
 
 

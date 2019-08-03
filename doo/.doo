@@ -21,4 +21,6 @@
 build :> python setup.py build
 install :> sudo python setup.py install
 default :> doo build; doo install
-uninstall,remove :>sudo pip uninstall doo
+uninstall,remove :> sudo pip uninstall doo
+edit :> vim *.py doo/*.py
+

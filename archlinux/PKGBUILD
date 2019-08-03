@@ -15,22 +15,24 @@ provides=('doo')
 conflicts=('doo')
 optdepends=()
 install="doo.install"
-#source=('git+https://github.com/user/doo')
+source=('git+https://github.com/bzhb/doo.git')
+sha256sums=('SKIP')
 
-build() {
+#build() {
 	#mkdir -p $srcdir/
 	#cd ../$srcdir/
-}
+#}
 
 package() {
-	cd ${pkgname}-${pkgver}
+	#cd ${pkgname}-${pkgver}
+	cd ${pkgname}/doo
 	python setup.py install --root="${pkgdir}" --optimize=1
 	#cd ../$srcdir/
 	#install -D -m 0755 doo "$pkgdir/usr/bin/doo"
-	install -D -m 0644 usr_share/doo.conf "$pkgdir/usr/share/doo/doo.conf"
-	install -D -m 0644 usr_share/template.doo "$pkgdir/usr/share/doo/template.doo"
+	install -D -m 0644 doo/conf/doo.conf "$pkgdir/usr/share/doo/doo.conf"
+	install -D -m 0644 doo/conf/template.doo "$pkgdir/usr/share/doo/template.doo"
 }
 
 #package() {
 #  python setup.py install --root="${pkgdir}" --optimize=1
-#}
+#}Author

@@ -29,8 +29,8 @@ class options:
     no_system_install=False
     if no_system_install:
         # Options for testing in devel directory:
-        global_config_file_template = 'usr_share/doo.conf'
-        command_file_template = 'usr_share/template.doo'
+        global_config_file_template = 'doo/conf/doo.conf'
+        command_file_template = 'doo/conf/template.doo'
         global_config_dir = expanduser('config/')
     else:
         # The files location in production:
